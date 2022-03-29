@@ -1,0 +1,114 @@
+---
+title: "Simple Linear Regression"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+```{r, message=FALSE, warning=FALSE}
+# Load your libraries
+library(car)
+library(tidyverse)
+library(pander)
+
+# Load your data after saving a csv file in your Data folder.
+# You can use either 
+Bleeding <- read.csv("../../Data/BleedingHeart.csv", header=TRUE)
+# or
+#   library(readr)
+#   someName <- read_csv("../../Data/BleedingHeart.csv")
+
+# Don't forget to run "Session -> Set Working Directory -> To Source file location"
+
+```
+
+
+<!-- Directions
+
+Come up with a simple linear regression of your own creation. 
+
+* Write the Background and clearly state your question. Then collect data and perform the linear regression analysis in order to answer your question. Use the proper order of first, ask the question, then second, figure out the answer.
+
+* You should collect both the quantitative response variable and the quantitative explanatory variable yourself. This can be data you collect from 
+    - the internet (like weather data, Facebook data, or sports data) 
+    - your own experiment 
+    - your own observational study
+* However,     
+    - The data should not be a single pre-existing dataset. It must be something that you piece together yourself.
+
+* You need at least $n=3$ $(X,Y)$ pairs to perform the regression. However, your regression will only be useful if you can get around $n=10$ or more observations.
+
+-->
+
+
+## Background
+
+Sometimes nature surprises as to how they are well patterned. This analysis will find out what pattern related to the stem lengths and the number of flowers on a stem that happens in bleeding heart flower trees. My grandma has some bleeding heart trees in her yard. So, I measured the stem length of the last divided stem on the main stem with a tape ruler and counted how many flowers on it.
+
+## Analysis
+
+This analysis attempts to model how many bleeding heart flowers in a stem using a linear regression.
+
+The model can be written as
+
+$$\underbrace{Y_i}_\text{no. flowers} = \overbrace{\beta_0}^\text{y-intercept} + \overbrace{\beta_1}^\text{slope}\underbrace{X_i}_\text{stem's Length} + \overbrace{\epsilon_i}^\text{error term} \text{  where } \overbrace{\epsilon_i \sim N(0, \sigma^2)}^\text{error term normally distributed} $$
+
+The hypotheses for the analysis concern the slope of the regression model, $\beta_1$. If the slope is zero, $\beta_1 = 0$, there is no relationship between the number of flowers on each stem. The analysis doesn't care about the y-intercept because there will be no flowers on the length of zero inch stem.
+
+$$H_0: \beta_1 = 0$$
+$$H_a: \beta_1 \neq 0$$
+$$\alpha = 0.05$$
+
+The scatter plot of the relationship between the number of flowers and the length of the stem has a positive trend, the correlation is 0.8145.
+
+```{r, message=FALSE, warning=FALSE}
+View(Bleeding)
+
+Bleedinglm <- lm(Flowers ~ Length, data = Bleeding)
+summary(Bleedinglm)
+
+
+plot(Flowers ~ Length, data = Bleeding, pch = 16, col = "Blue", main = "Number of Bleeding Heart Flowers in a Stem", xlab = "Stem's Length (inches)", ylab = "Number of Flowers on A Stem")
+abline(Bleedinglm, lwd = 3, col = "red")
+mtext(side = 3, text = "stem lengths' are inaccurately measured by hand", cex = 0.8)
+abline(v = seq(1,8,1), h = seq(2,10, 2),lty = 2, col = "grey")
+
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+cor(Bleeding) %>% pander(caption = "corrleation of the number of flowers and the stem length:")
+
+```
+
+The equation of the estimated regression equation from the scatterplot above is given by
+
+$$\underbrace{\widehat{Y_i}}_\text{mean actual no.flowers} = -0.5669 + 1.156\underbrace{X_i}_\text{stem length}$$
+
+The estimated slope of this regression is 1.156 with p-value, 2.18e-05, which rejects the null hypothesis.
+
+
+```{r, message=FALSE, warning=FALSE}
+pander(summary(Bleedinglm))
+
+```
+
+## Interpretation
+
+Assuming the model is appropriate, then the model estimates that growing one inch of a stem will result in an average 1.156 (p-value = 2.18e-05), the slope value, flowers bloom. The y-intercept, -0.5669, which means that in average there are - 0.5669 flowers on a stem when the stem length is zero. However, there will be a no flower on the stem length of zero inch. The p-value of the y-intercept, 0.5683, show that it is insufficient. Therefore, the interpretation will begin when the stem length is longer than 0.5 inches the stem value where the number of flowers is positive
+
+## Appropriateness of the above Regression
+
+Variance consistency, linear relation, normal errors, and independent errors should be check for appropriateness using the simple linear regression. The "Residuals vs Fitted" graph shows that the linear relation and the consistency of the variances are questionable. The dots spread seems more curved downward and some dots are away from the concentrated dots. The "Normal Q-Q" graph shows that there is no dot going out the dot lines, which can be considered as the errors are normally distributed. The "Residuals vs Order" graph shows that there is no specific trend which means that the errors are independent. Therefore, with this amount of data, the linear relation and the consistency of the variation don’t meet to the linear regression assumption, the above analysis is not appropriate for linear regression. More data will be needed to get a closer estimate of the "Given Law".
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1,3))
+plot(Bleedinglm, which  = 1:1)
+qqPlot(Bleedinglm$residuals, id = FALSE, pch = 16, col = "red", main = "Normal Q-Q", cex = 1)
+plot(Bleedinglm$residuals, main = "Redisulas vs Order", ylab = "Residuals")
+
+```
+

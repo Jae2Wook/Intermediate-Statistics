@@ -1,0 +1,144 @@
+---
+title: "Predicting the Weather"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+setwd("c:/mydir")
+mydata <- read_excel("Deleteme.xlsx")
+mydata
+
+
+```{r message=FALSE, warning=FALSE}
+library(car)
+library(DT)
+library(pander)
+library(readxl)
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+
+HotWheather <- read_excel("C:/Users/Jae/Desktop/R/Math 325/Statistics-Notebook-master/Statistics-Notebook-master/Data425/HotWheather.xlsx", 
+    col_types = c("numeric", "numeric"))
+```
+
+## Purpose
+
+I am planning to predict the future maximum air temperature with the past days' highest temperature data. This regression model will try to predict the coming Monday, September 21st (2020).
+
+## Graph
+
+```{r message=FALSE, warning=FALSE}
+wtlm <- lm(Temp ~ Date, data = HotWheather)
+W = coef(wtlm)
+
+plot(Temp ~ Date, data = HotWheather, pch = 16, col = "red", xlab = "Date", ylab = "Temperature", main = "Highest Temperature In September 2020 (Rexburg, Idaho)", xlim = c(0, 22))
+#curve(W[1] + W[2]*x, add = TRUE, col = "orange")
+abline(wtlm, col = "orange")
+abline(v = seq(0,22,1), h = seq(50, 100, 5), lty = 2, col = "grey")
+legend("topright", legend = c("Daily Highest Temp", "Linear Regression"), lty = c(NA, 1), pch = c(16, NA), col = c("red", "orange"), cex = 0.8)
+points(x=21, y=81.41, pch = 17)
+text(x = 21, y = 81.41, label = c("estimated Temp","81.41 F"), pos = c(3,1), cex = 0.6)
+#text(x = 21, y = 81.41, label = "81.41 F", pos = 1, cex = 0.6)
+#DataFrame.HotWheather %>% add_row(Date = 21, Temp = 81.41)
+
+#HotWheather <- rbind(HotWheather, "21" = c(21, 81.41))
+
+#points(21, 81.41, pch = 16, col = "black")
+
+# legend("topleft", xpd = TRUE, inset = c(-0.1, 0),legend = c("Daily Highest Temp", "Linear Regression"), col = c("red", "orange"), lty = c(NA, 1), pch = c(16, NA), cex = 0.8, bty = "n")
+
+#text(x = c(1, 5, 9),
+#     y = c(9, 5, 1),
+#     labels = c("Put", "text", "here"))
+# pos = 3 above the dot
+
+
+#HotWheather %>% 
+#  ggplot(aes(y = Temp, x = Date))+
+#  geom_point(color = "red")+
+#  geom_smooth(method = "lm", color = "orange", se = FALSE)+
+#  labs(x = "Date", y = "Tempterature", title = "Highest Temperature")+
+#  theme_bw()
+
+
+```
+
+## Conclusion
+
+The highest temperature on September 21, 2020 (Monday) is estimated as 81.41 F. The lower bound of the highest temperature is 68.7 F, and the upper bound of the highest temperature is 94.13 F. Those temperatures are the 95% confidence intervals around the mean. However, the test is not appropriate, this estimated temperature has no meaning. Additionally, the predicted highest temperature and the linear regression model's estimates are different because this model is not proper. The linear regression model's estimate is 81.51471 F. The estimated temperature of 81.41F is calculated when linear regression is appropriate for use.
+
+```{r message=FALSE, warning=FALSE}
+predict(wtlm, data.frame(Date = 21), interval = "confidence") %>% pander()
+```
+
+
+## Data
+
+The data is collected from [Past Weather in Rexburg, Idaho](https://www.timeanddate.com/weather/@5605242/historic?month=1&year=2019). The highest temperature from September 1st to September 17th was collected. There are many factors that determine the temperature, but since this test is trying to assume the highest temperature on September 21st, we picked the highest daily temperature. The Date column is recorded as 1 to 17 which reflects calendar dates. The Temp column shows the highest temperature of that date.
+
+```{r message=FALSE, warning=FALSE}
+datatable(HotWheather, options=list(lengthMenu = c(3,10,30)), extensions="Responsive")
+```
+
+
+## Test Hypothesis
+
+This model that is used for the linear regression is
+
+$$\underbrace{Y_i}_\text{Temp} = \overbrace{\beta_0}^\text{y-intercept} + \overbrace{\beta_1}^\text{slope}\underbrace{X_i}_\text{Date} + \overbrace{\epsilon_i}^\text{error term} \text{  where } \overbrace{\epsilon_i \sim N(0, \sigma^2)}^\text{error term normally distributed} $$
+
+The test result is shown as
+
+```{r message=FALSE, warning=FALSE}
+summary(wtlm) %>% pander()
+```
+
+The hypothesis for the y-intercept is
+
+$$H_0: \beta_0 = 0$$
+$$H_a: \beta_0 \neq 0$$
+$$\alpha = 0.05$$.
+
+The y-intercept's p-value (2.58e-11) is smaller than the $\alpha$ value. So, the null hypothesis for the y-intercept can be rejected.
+
+The hypothesis for the slope is
+
+$$H_0: \beta_1 = 0$$
+$$H_a: \beta_1 \neq 0$$
+$$\alpha = 0.05$$.
+
+The slope's p-value (0.992) is bigger than the $\alpha$ value. So, the null hypothesis for the slope fails to be rejected.
+
+From the test, the estimated regression can be written as
+
+$$\hat{Y_i} = 81.514706 \quad + \quad 0X_i$$.
+
+The y-intercept's value is 81.514706 and the slope's value is 0. By using this model the prediction for September 21, 2020 (Monday) will be 81.51471 F.
+
+```{r message=FALSE, warning=FALSE}
+y <- 81.514706 - 0*21
+y
+```
+
+
+
+## Test Appropriateness
+
+As all, this test looks questionable. The residuals vs. fitted-values plot shows constant variance and a nice linear relation. However, the plot doesn't show speakable linear relation and constant variance. The Q-Q plot shows if the data is normally distributed. The plot shows that data is pretty normal except for one dot that is out of the line. The residuals vs. order plot shows the trends. The plot shows an interesting pattern, so the error terms can be assumed to be not independent.
+
+```{r message=FALSE, warning=FALSE}
+par(mfrow = c(1,3))
+plot(wtlm, which = 1)
+qqPlot(wtlm$residuals, main = "Normal QQ", pch = 16, col = "red", id = FALSE)
+plot(wtlm$residuals, main = "Residuals vs. Order", ylab = "Residuals")
+```
+
+
+## Test Interpretation
+
+Assuming the model is appropriate, then the model estimates that a day pass will result in an average 0 F (p-value = 0.992) change. The y-intercept, 81.514706, which means that in average the temperature is 81.514706 F when the date is zero, 31 August 2020. The p-value of the y-intercept, 2.58e-11, shows that it is sufficient to reject the null hypothesis. However, the p-value of the slope, 0.992, shows that it is insufficient to reject the null hypothesis. Additionally, the plots for appropriateness is not supporting that the linear regression is good enough, it is hard to trust this model.
+
+

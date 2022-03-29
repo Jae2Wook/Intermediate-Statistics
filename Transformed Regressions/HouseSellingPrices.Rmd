@@ -1,0 +1,240 @@
+---
+title: "HouseSellingPrices"
+author: "Jae Wook Jung"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(car)
+library(mosaic)
+library(readr)
+library(fastDummies)
+library(MASS)
+library(dplyr)
+library(pander)
+
+train <- read_csv("C:/Users/Jae/Desktop/R/Math 325/Statistics-Notebook-master/Statistics-Notebook-master/Data425/house-prices-advanced-regression-techniques/train.csv")
+
+```
+
+## Sorting Out
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# mylm <- lm(SalePrice ~ OverallQual*BsmtCond,data = train)
+
+# summary(mylm)
+
+# table(as.factor(train$BsmtCond))
+
+# typeof(train$GrLivArea)
+
+# MSZoning - increasing cr
+# Street -increasing cr
+# LandSlope - decreasing cr
+# ExterCond - increasing cr
+# BsmtCond - increasing cr
+# Heating - decreasing  cr
+# CentralAir - increasing cr  V
+# Electrical - decrease and spark cr
+# Functional - increasing cr
+# GarageFinish - decreasing cr V\
+# GarageQual - increasing cr
+# GarageCond - increasing cr
+# PavedDrive - increasing cr \ 
+
+# OverallQual - increasing^2  VV
+# YearBuilt - increasing ^2    V
+# YearRemodAdd - increasing^2  V
+# TotalBsmtSF - ^3           VV  N
+# 1stFlrSF - increasing^2   V    N
+# FullBath - increasing     V
+# TotRmsAbvGrd - increasing V 
+# GarageCars - increase and drops V
+# GarageArea - increasing^2 V  N
+# BsmtUnfSF - increasing^2 
+# GrLivArea - increasing V   N
+
+# plot((train$SalePrice), log(train$SalePrice))
+
+train1 <- dplyr::select(train, c(SalePrice, OverallQual, YearBuilt, YearRemodAdd, TotRmsAbvGrd, GarageCars, BsmtUnfSF, GarageFinish, CentralAir, PavedDrive))
+
+# Fit the full model 
+full.model <- lm(SalePrice ~., data = train1)
+
+# Stepwise regression model
+step.model <- stepAIC(full.model, direction = "both", 
+                      trace = FALSE)
+summary(step.model) # check variables fit
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(121)
+
+num_rows <- 1000 #1460 total
+keep <- sample(1:nrow(train), num_rows) # choosing 1000 out of 1460
+
+mytrain <- train[keep, ] #Use this in the lm(..., data=mytrain) 1000 data
+
+mytest <- train[-keep, ] #Use this in the predict(..., newdata=mytest) 460 data
+
+```
+
+## My Model
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+tlm <- lm((log(SalePrice))^{2} ~ OverallQual + TotRmsAbvGrd + TotRmsAbvGrd:I(YearBuilt^2) + GarageCars:OverallQual + CentralAir+ CentralAir:I(YearBuilt^2) + CentralAir:TotRmsAbvGrd + CentralAir:TotRmsAbvGrd:I(YearBuilt^2), data = mytrain)
+
+summary(tlm)
+
+boxCox(tlm)
+
+t <- coef(tlm)
+
+```
+
+## Adjusted R_squared
+
+Adjusted R_squared formula is
+
+$$R_{adj}^2 = 1 - \frac{(n-1)SSE}{(n-p)SSTO}$$
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+Y <- (log(mytrain$SalePrice))^(2)
+
+Y_hat <- predict(tlm, mytrain)
+
+sum(Y - Y_hat)
+
+SSE <- sum((Y - Y_hat)^2)
+
+SSTO <- sum((Y - mean(Y))^2)
+
+n <- nrow(mytrain)
+
+p <- length(t)
+
+adj_Rs <- 1 - ((n - 1)*SSE)/((n - p)*SSTO)
+
+
+```
+
+
+**Adjusted R-squared**: `r adj_Rs`
+
+## Validated Adjusted R_squared
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+Yt <- (log(mytest$SalePrice))^(2)
+
+Yt_hat <- predict(tlm, newdata = mytest)
+
+sum(Yt - Yt_hat)
+
+SSE <- sum((Yt - Yt_hat)^2)
+
+SSTO <- sum((Yt - mean(Yt))^2)
+
+n <- nrow(mytest)
+
+p <- length(t)
+
+adj_Rs1 <- 1 - ((n - 1)*SSE)/((n - p)*SSTO)
+
+```
+
+**Adjusted R-squared**: `r adj_Rs1`
+
+## Graph
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+table(train$OverallQual)
+
+sum(is.na(train$OverallQual))
+
+mode(train$YearBuilt)
+
+table(train$TotRmsAbvGrd)
+
+table(train$GarageCars)
+
+table(train$BsmtUnfSF)
+
+table(train$GarageFinish)
+
+table(train$CentralAir)
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+#tlm <- lm((log(SalePrice))^{2} ~ OverallQual + YearBuilt + #I(YearBuilt^2) + TotRmsAbvGrd + TotRmsAbvGrd:I(YearBuilt^2) + TotRmsAbvGrd:OverallQual + GarageCars:OverallQual + BsmtUnfSF:OverallQual, data = mytrain)
+
+#plot((SalePrice) ~ OverallQual, data = mytrain, main = "Yearbuilt & OverallQual")
+
+#YearBuilt <- 2000
+
+#curve(exp((t[1] + t[2]*x + t[3]*YearBuilt +t[4]*YearBuilt^2)^{1/2}), add = TRUE)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+plot(SalePrice ~ OverallQual, data = train, main = "House Price with TotRmsAbvGrd = 6, \n YearBuilt = 2006, \n GarageCars = 2", xlab = "Overall Quality (1 ~ 10)", ylab = "House Prices ($)")
+
+TotRmsAbvGrd <- 6
+
+YearBuilt <- 2006
+
+GarageCars <- 2
+
+curve(exp((t[1] + t[2]*x + t[3]*TotRmsAbvGrd + t[4] + t[5]*TotRmsAbvGrd*YearBuilt^2 + t[6]*x*GarageCars + t[7]*YearBuilt^2 + t[8]*TotRmsAbvGrd + t[9]*YearBuilt^{2}*TotRmsAbvGrd)^{1/2}), col = "red", add = TRUE) #centeralAir Y: t[4] t[7] t[8] t[9]
+
+curve(exp((t[1] + t[2]*x + t[3]*TotRmsAbvGrd + t[5]*TotRmsAbvGrd*YearBuilt^2 + t[6]*x*GarageCars)^{1/2}), col = "green", add = TRUE) #centeralAir N
+
+legend("topleft", legend = c("with Centeral Air", "without Central Air"), lty = c(1,1), col = c("red", "green"))
+
+table(train$OverallQual) %>% pander(caption = "numbers of houses in quality levels")
+
+
+```
+
+The graph gives nice average price of house in between quality level five to 7. However, other than those levels, the regression line could not give nice anticipated house price.
+
+## Interpretation
+
+Using `OverallQual` as a x-variable, I found out my model fits to the original data with `r summary(tlm)$adj.r.squared`. Because the model has four numeric variables, I had to set a number for them except for the x-axis variable. The y-intercept of the model with `Central Air` is $e^{(124.5286)^{1/2}}$ = 70209.46 and without is $e^{(121.9982)^{1/2}}$ = 62647.53. The slope of the model keep changes because of the exponential. The Quality 1 with `Centeral Air` for house price is 82218.39.
+
+## Model Appropriation
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow = c(1,3))
+
+plot(tlm, which = 1)
+
+qqPlot(tlm, main = "QQ Normal")
+
+plot(tlm$residuals, main = "Residuals VS Order", ylab = "Residuals")
+
+par(mfrow = c(1,1))
+
+```
+
+Residuals vs Fitted plot seems to have not good linear relation since the red line curved downward. There are some outliers that makes consistent variation a little weak, and the data are more centered to the center. The data are not perfectly normal, so it is a little questionable. Residual vs Order plot shows that the data are concentrated in the zero horizontal line. These three plots do not look in good fit when they are plotted in small sizes, the data seems okay to use with my model.
+
+
+
+ggplot(aes(y=residual, x = prediction, color = colume_name)) : shows the relations
+
+
+
+
+

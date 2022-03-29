@@ -1,0 +1,190 @@
+---
+title: "Recalling Words"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+</script>
+
+```{r, include=FALSE}
+library(mosaic)
+library(pander)
+library(ggplot2)
+library(car)
+library(pander)
+library(DT) #You may need to run: install.packages("DT") 
+```
+
+```{r, eval=FALSE}
+# Play the chunk above and this one to get the data into your Console
+View(Friendly)
+?Friendly
+```
+
+
+<br />
+
+#### Background
+
+Many teachers and other educators are interested in understanding how to best deliver new content to students. In general, they have two choices of how to do this.
+
+1. The Meshed Approach
+    * Deliver new content while simultaneously reviewing previously understood content.
+
+2. The Before Approach
+    * Deliver new content after fully reviewing previously understood content.
+
+A study was performed to determine whether the *Meshed* or *Before* approaches to delivering content had any positive benefits on memory recall. 
+
+<div style="padding-left:15px;">
+
+##### <a href="javascript:showhide('uniquename')">The Experiment <span style="font-size:8pt;">(click to view)</span></a>
+
+
+<div id="uniquename" style="display:none;">
+
+Individuals were seated at a computer and shown a list of words. Words appeared on the screen one at a time, for two seconds each, until all words had been shown (40 total). After all words were shown, they were required to perform a few two-digit mathematical additions (like 15 + 25) for 15 seconds to avoid immediate memory recall of the words. They were then asked to write down as many of the 40 words as they could remember. They were given a maximum of 5.3 minutes to recall words.
+
+The process of showing words and recalling words was repeated four times with the same list of words each time (four chances to get it right). The presentation of the first trial was the same for all treatment conditions. However, trials 2, 3, and 4 were slightly different for each treatment condition.
+
+<div style="padding-left:15px;">
+
+The `SFR` group (the control group) stands for Standard Free Recall. In all four trials the same list of 40 words was presented, in a random order each time.
+
+The `Before` group also used the same 40 words during each trial. However, any words that were correctly recalled in a previous trial were presented first, or *before* the words that were not recalled in the last trial. After all the correct words were presented in random order, the non-recalled words were presented in a random order.
+
+The `Meshed` group also used the same 40 words during each trial. However, words that were correctly recalled in a previous trial were alternated with a missed word during the next presentation order. 
+
+</div>
+
+The data records the number of correctly recalled words (out of the 40 possible) from the fourth trial. Results were obtained for 30 students, 10 in each of the three treatment groups: `SFR`, `Before`, and `Meshed`. 
+
+</div>
+
+##### <a href="javascript:showhide('uniquename2')">The Data <span style="font-size:8pt;">(click to view)</span></a>
+
+<div id="uniquename2" style="display:none;">
+
+The results from the study can be found in the `Friendly` data set in R after loading `library(car)`. 
+
+Click the "Code" button to see the data.
+
+
+```{r}
+datatable(Friendly, options=list(lengthMenu = c(3,10,30)))
+```
+
+
+</div>
+</div>
+
+<br />
+
+
+<!-- Begin writing your analysis below here. -->
+
+## Analysis
+
+The distributions of the data within each level of “correct” are left-skewed and not normaly distributed (the under graph is showing it).
+<!--
+The distributions of test statistics categorized with "correct" are non-parametric. The reason the data is nonparametric is that the data is not normaly distributed (the under graph is showing it).
+-->
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+F1 <- Friendly %>% filter(condition == "Meshed" | condition == "SFR") %>% droplevels()
+View(F1)
+
+F2 <- Friendly %>% filter(condition == "Before" | condition == "SFR") %>% droplevels()
+View(F2)
+
+```
+
+Additionally, the sample sizes are small with a size of 10 for each group. Therefore, this analysis uses the (non-parametric) Wilcoxon Rank Sum (Mann - Whitney) Test. This analysis compares the Meshed method and the SFR method as the first case and the Before method and the SFR method as the second case to find out the two methods are effective on memory recall, respectively. 
+
+The null and alternative hypotheses are written as
+$$H_0: \text{ median of the difference} = 0$$
+$$H_a: \text{ median of the difference} \neq 0$$
+
+
+The level of significance is
+$$\alpha = 0.05$$
+
+However, this analysis uses data from the SFR method twice, so applying [Bonferroni correction](https://en.wikipedia.org/wiki/Bonferroni_correction), the level of significance for each test is
+$$\alpha = 0.025$$.
+
+### Graph
+
+The graph shows that the medians for each method groups have conspicuous gaps. However, just seeing the graph will not tell the truth which is the two approaches, $\text{Meshed}$ and $\text{Before}$, are effective. Therefore, the Wilcoxon Test should be implemented to see the graph is obvious.
+
+```{r, message=FALSE, warning=FALSE}
+
+ggplot(Friendly, aes(x = condition, y = correct, fill = condition)) +
+  geom_boxplot() +
+  labs(title = "Memorized Words by Different Methods", x = "Methods", y = "Number of Memorized Words")+ 
+    geom_jitter(shape = 16) +
+  coord_flip() +
+  theme_bw()
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+
+Friendly %>% group_by(Methods = condition) %>% summarise(Median = median(correct), Sample_Size = n()) %>% pander(captioin = "Medians & Sample Sizes for Each Group")
+
+```
+
+### Wilcoxon Rank Sum (Mann - Whitney) Test
+
+##### 1) "SFR" and "Meshed" Methods Wilcoxon Test
+
+The Wilcoxon Test with "SFR" and "Meshed" methods shows that the $\text{p-value}$, $\text{0.05075}$, is bigger than the significance level, $\alpha = 0.025$. Therefore, the null hypothesis is failed to reject.
+
+```{r, message=FALSE, warning=FALSE}
+
+wilcox.test(correct ~ condition, data = F1, mu = 0, alternative = "greater", conf.level = 0.975) %>% pander(caption = "SFR & Meshed Method Wilcoxon Test")
+
+# table(F1$condition, F1$correct) %>% pander(caption = "SFR & Meshed Methods Wilcoxon Test")
+
+```
+
+##### 2) "SFR" and "Before" Methods Wilcoxon Test
+
+The Wilcoxon Test with "SFR" and "Before" methods shows that the $\text{p-value}$, $\text{0.02278}$, is bigger than the significance level, $\alpha = 0.025$. Therefore, the null hypothesis is rejected.
+
+```{r message=FALSE, warning=FALSE}
+
+wilcox.test(correct ~ condition, data = F2, mu = 0, alternative = "greater", conf.level = 0.975) %>% pander(caption = "SFR & Before Method Wilcoxon Test")
+
+# table(F1$condition, F1$correct) %>% pander(caption = "SFR & Before Method Wilcoxon Test")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#par(mfrow = c(2,2))
+#qqPlot(correct ~ condition, data = F1, main = c("Meshed Method", "SFR Method"), ylab = "Number of Memorized Words")
+
+#qqPlot(correct ~ condition, data = F2, main = c("Before Method", "SFR Method"), ylab = "Number of Memorized Words")
+
+```
+
+### Conclusion
+
+This analysis was performed to show whether two methods, the Meshed and Before methods, compared to the SFR method, have a positive advantage on memory recall. Looking at the graph, the Mesh method and the Before method seem effective. However, both of the memory recall methods are not effective according to the Wilcoxon Rank Sum (Mann - Whitney) Test. In the SFR and the Meshed methods test, the $\text{p-value}$, $\text{0.05075}$, is greater than the level of significance, $\alpha = 0.025$. Also, in the SFR and the Before methods test, the $\text{p-value}$, $\text{0.02278}$, is less than the level of significance, $\alpha = 0.025$. In conclusion, the null hypotheses fail to reject in the SFR and the Meshed methods test, and the null hypothesis is rejected in the SFR and the Before methods test. This analysis shows that the Before method has a positive advantage on memory recall but not the Meshed method.
+
+
+<!-- Note that your goal is to use the Friendly data to show whether or not the Meshed or Before methods have any positive benefit on memory recall. -->
+
+
+
+
+
+

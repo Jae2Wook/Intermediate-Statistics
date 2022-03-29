@@ -1,0 +1,131 @@
+---
+title: "Car Prices"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+<br>
+
+## Background
+
+Chevrolet makes different types of cars. There are four types of cars that data shows which are "Convertible", "Coupe", "Hatchback", and "Sedan". This analysis wants to help customers with the different car types that are holding well of its price as the customer drives the car. Also, this analysis gives the general expectation about the price ranges of the used car.
+
+```{r, include=FALSE}
+# Be sure to download the CarPrices.csv file and save it
+# into your Data folder prior to knitting this file.
+CarPrices <- read.csv("../../Data/CarPrices.csv", header=TRUE)
+
+# Remember, to get the CarPrices data into your Console you have
+# to use the "Import Dataset" option in the "Environment" window.
+library(mosaic)
+library(car)
+library(tidyverse)
+library(pander)
+
+```
+
+## Analysis
+
+This analysis attempts to model how the different car types prices are changing as the mileage increase using the multiple linear regression.
+
+The model can be written as
+
+$$\underbrace{Y_i}_\text{price} = \overbrace{\beta_0}^\text{y-intercept} + \overbrace{\beta_1}^\text{slope}\underbrace{X_i1}_\text{mileage} + \overbrace{\beta_2}^\text{adj.y-intercept}\underbrace{X_i2}_\text{coupe} +
+\overbrace{\beta_3}^\text{adj.y-intercept}\underbrace{X_i3}_\text{hatchback} + \overbrace{\beta_4}^\text{adj.y-intercept}\underbrace{X_i4}_\text{sedan} $$
+
+$$+ \overbrace{\beta_5}^\text{adj.slope}\underbrace{X_i1 X_i2}_\text{interaction} +
+\overbrace{\beta_6}^\text{adj.slope}\underbrace{X_i1 X_i3}_\text{interaction} + \overbrace{\beta_7}^\text{adj.slope}\underbrace{X_i1 X_i4}_\text{interaction} + \overbrace{\epsilon_i}^\text{error term} \text{  where } \overbrace{\epsilon_i \sim N(0, \sigma^2)}^\text{error term normally distributed} $$
+
+$\star: \text{One of the types "convertible" is alphabetically the first group, so it is the “baseline” and doesn't show up}$
+$\text{    on the output.}$
+
+The null hypothesis, $\beta = 0$, there will be no effects on the original slopes or the y-intercept, depends on X-variable.  The alternative hypotheses, $\beta \neq 0$, there will be effects on the original slopes or the y-intercept, dependes on X-variable.
+
+The coefficients and $X_i$ is following
+
+
+|Coefficients($\beta$)|X-variable|Meaning|
+|---------------------|----------|-------|
+|$\beta_{0}$|      |The average cost of a type "convertible" with zero miles|
+|$\beta_1$|$X_{i1}$ = mileage|Price depreciation as a mile increases for "Convertible"|
+|$\beta_2$|$X_{i2}$ = 1, if Type = Coupe or 0, if Type $\neq$ Coupe|Price depreciation as a mile increases for "Coupe"|
+|$\beta_3$|$X_{i3}$ = 1, if Type = Hatchback or 0, if Type $\neq$ Hatchback|Price depreciation as a mile increases for "Hatchback"|
+|$\beta_4$|$X_{i4}$ = 1, if Type = Sedan or 0, if Type $\neq$ Sedan|Price depreciation as a mile increases for "Sedan"|
+|$\beta_5$|$X_{i5}$ = 1, if Type = Coupe or 0, if Type $\neq$ Coupe for interaction|The depreciation rate differs from the "Convertible" depreciation rate|
+|$\beta_6$|$X_{i6}$ = 1, if Type = Hatchback or 0, if Type $\neq$ Hatchback for interaction|The depreciation rate differs from the "Convertible" depreciation rate|
+|$\beta_7$|$X_{i7}$ = 1, if Type = Sedan or 0, if Type $\neq$ Sedan for interaction|The depreciation rate differs from the "Convertible" depreciation rate|
+
+
+```{r, message=FALSE, warning=FALSE}
+View(CarPrices)
+# levels(CarPrices$Liter)
+CarC <- CarPrices %>% filter(Make == "Chevrolet") %>% droplevels()
+
+CarC <- CarC %>%  mutate(Cylinder = as.factor(Cylinder))
+View(CarC)
+# levels(CarC$Type)
+
+CarC.lm <- lm(Price ~ Mileage*Type, data = CarC)
+summary(CarC.lm) %>% pander()
+
+```
+
+The p-values (0.3993, 0.2174, 0.1305, respectively) for "Mileage:TypeCoupe", "Mileage:TypeHatchback", and "Mileage:TypeSedan" are fail to reject the null hypothesis. Thus, $\beta_5$, $\beta_6$, and $\beta_7$ are 0. So, the analysis will be revised that the car types are not affecting to each car type slope. Equivalently, the different car types are not affecting the price change per mile, mutually.
+
+The revised model is
+
+$$\underbrace{Y_i}_\text{price} = \overbrace{\beta_0}^\text{y-intercept} + \overbrace{\beta_1}^\text{slope}\underbrace{X_i1}_\text{mileage} + \overbrace{\beta_2}^\text{adj.y-intercept}\underbrace{X_i2}_\text{coupe} +
+\overbrace{\beta_3}^\text{adj.y-intercept}\underbrace{X_i3}_\text{hatchback} + \overbrace{\beta_4}^\text{adj.y-intercept}\underbrace{X_i4}_\text{sedan}$$
+$$+ \overbrace{\epsilon_i}^\text{error term} \text{  where } \overbrace{\epsilon_i \sim N(0, \sigma^2)}^\text{error term normally distributed}$$
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1,1))
+palette(c("red", "skyblue", "green", "black"))
+# levels(CarC$Type)
+plot(Price ~ Mileage, data = CarC, col = CarC$Type, pch = 16, main = "Chevrolet Price & Mielage with different Type", xlim  = c(-1000, 43000), ylim = c(7000, 50000))
+legend("topright", legend = c("Convertible", "Coupe", "Hatchback", "Sedan"), pch = 16, bty = "n", col = palette())
+abline(v = seq(0,40000,10000), h = seq(10000,40000, 10000),lty = 2, col = "grey")
+
+CarC1.lm <- lm(Price ~ Mileage + Type, data = CarC)
+summary(CarC1.lm) %>% pander()
+C = coef(CarC1.lm)
+# C
+
+curve(C[1] + C[2]*x, col = palette()[1], add = TRUE)
+curve((C[1] + C[3]) + C[2]*x, col = palette()[2], add = TRUE)
+curve((C[1] + C[4]) + C[2]*x, col = palette()[3], add = TRUE)
+curve((C[1] + C[5]) + C[2]*x, col = palette()[4], add = TRUE)
+
+table(CarC$Type) %>% pander(caption = "The number of different type of cars")
+
+```
+
+## Interpretation
+
+Convertible, one of the types, is the "baseline" that the y-intercept, \$44496 (p-value: 1.132e-82), and the slope, \$-0.1551 (p-value: 4.689e-06), were estimated as standard. Price reduction per mile (-\$ 0.1551 per mile) is the same as for different types of cars because the p-values (0.3993, 0.2174, 0.1305, respectively) for "Mileage:TypeCoupe", "Mileage:TypeHatchback", and "Mileage:TypeSedan" are insufficient to reject the null hypotheses. The types, Coupe, Hatchback, and Sedan cost less by\$-23470, \$-27363, \$-26575, respectively, compared to Convertible. Because the slope of other types of cars does not change, comparing the same mileage with the different types of cars price differences will be the same.
+
+The defects for this analysis is that the dots in the scatter plot are considerably scattered away from their own linear models. In particular, the coupe and sedan types seem to have more expensive types internally.
+
+Customers can estimate the price range for their preferred vehicle type. The depreciation price is the same for all types of cars, so it is more advantageous if a customer can afford the more expensive type of car. 
+
+
+## Checking Linear Regression Appropriateness
+
+Variance consistency, linear relation, normal errors, and independent errors should be check for appropriateness using the linear regression. The "Residuals vs Fitted" graph shows that the linear relation and the consistency of the variances are questionable. Most of the dots are spread on the left side and vertically, and the linear relation seems curved downward. Thus, there is no linear relationship and variance is not consistent. The "Normal Q-Q" graph shows that there are many dots are going out the dot lines, which can be considered as the errors are not normally distributed. The "Residuals vs Order" graph shows that there is a trend which means that the errors are dependent. Therefore, all requisitions that are linear relation, constant variance, errors are normally distributed, and the errors are not normally distributed do not meet to use linear regression. 
+
+
+```{r, message=FALSE, warning=FALSE}
+par(mfrow = c(1,3))
+plot(CarC.lm, which = 1)
+qqPlot(CarC.lm$residuals, main = "QQ-Normal", ylab = "residuals")
+plot(CarC.lm$residuals, main = "Residual vs Order", ylab = "residuals")
+
+```
+
+
+
+

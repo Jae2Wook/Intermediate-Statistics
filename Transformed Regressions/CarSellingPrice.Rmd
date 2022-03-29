@@ -1,0 +1,156 @@
+---
+title: "Porsche Macan Price and Mileage"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+```{r message=FALSE, warning=FALSE}
+library(car)
+library(mosaic)
+library(tidyverse)
+library(ggplot2)
+library(DT)
+library(pander)
+```
+
+
+
+## Background
+
+I collected some second-hand cars of Porsche Macan. The mileage and model year are various. I will try to find how prices related to price and mileage with the regression relationship.
+
+I don't have a deep knowledge about cars. I heard that buying brand new car is not really a good idea because car price depreciate is really fast.
+So, I wonder how much Porsche Macan will be with 18,000 mileage on.
+## Data
+
+Here are some data that I collected from [KSL Auto](https://cars.ksl.com/) and [Autotrader.com](https://www.autotrader.com/). The car model is Porche Macan.
+
+```{r message=FALSE, warning=FALSE}
+price <- c(44097,50999,42991,43999,41500,51489,36289,51949,63489,65998,41500,34750,38500,44900,55998,51397,51389,58221,59500,38846,34895,36958,38500,36289,58221,40000,39000,67489,63981,66320,65250,51489,58221,67480,71230,82710,66310,59870,69540,50500,54000,36289)
+mileage <- c(25426,5136,40941,32383,42725,20530,31954,12258,40815,19160,42725,58269,44709,18000,43751,18403,20530,34974,64770,40436,25950,59069,47511,31954,34974,34941,25290,23032,26689,4710,2734,20530,34974,4049,3625,2649,2002,3490,3166,43768,52000,31954)
+car_dat <- data.frame(price, mileage)
+
+my_mileage <- 18000
+
+datatable(car_dat, options=list(lengthMenu = c(3,10,30)), extensions="Responsive")
+
+```
+
+## Hypothesis
+
+The hypothesis for the y-intercept is
+$$H_0: \beta_0 = 0$$
+$$H_a: \beta_0 \neq 0$$
+with $\alpha = 0.05$.
+
+The hypothesis for the slope is 
+$$H_0: \beta_1 = 0$$
+$$H_a: \beta_1 \neq 0$$
+with $\alpha = 0.05$.
+
+## Model 1 (Linear Regression Analysis)
+
+```{r message=FALSE, warning=FALSE}
+Clm <- lm(price ~ mileage, data = car_dat)
+summary(Clm) %>% pander()
+
+plot(price ~ mileage, data = car_dat, col = "blue", pch = 16, main = "Second-Hand Car Price vs Mileage \n (Porsche Macan)", xlab = "mileage (miles)", ylab = "price (USD)")
+abline(Clm, col = "red")
+abline(v = my_mileage, col = "black", lty = 2)
+legend("topright", legend = c("data", "Y_hat","Hoping mileage"), lty = c(NA, 1, 2), pch = c(16, NA, NA), col = c("blue", "red", "black"))
+
+
+```
+
+The y-intercept's p-value is 4.632e-23 which is significant, the y-intercept is 63440. The slope's p-value is 7.596e-05 which is significant, the slope is -0.4096.
+
+
+With the above information, the estimated regression equation is
+$$\overbrace{\hat{Y_i}}^\text{Price} = 63440 -0.4096\overbrace{X_i}^\text{Mileage}.$$
+
+This model shows that when when mileage is zero, a car price is \$63440. And as one mileage increases, the car price decreases by \$0.4096 in average.
+
+```{r message=FALSE, warning=FALSE}
+par(mfrow = c(1, 3))
+plot(Clm, which = 1)
+qqPlot(Clm$residuals, pch = 16, col = "blue", col.line = "orange", main = "QQ Normal")
+plot(Clm$residuals, main = "Residuals vs Order", ylab = "Residuals")
+par(mfrow = c(1,1))
+
+```
+
+The error terms normality seems pretty good by looking at the Q-Q Normal plot. The error terms are independent according to the Residual vs Order plot. There seems no trend, but it does look a little funny shape. However, the Residuals vs Fitted plot shows two problems that make it hard to trust the obtained linear regression model. The red line shows that the regression relation between Y and X is not linear. The variance of the error terms is not constant over all X values. Its middle points down and the two end sides are pointing up.
+
+## Using Box-Cox
+
+```{r message=FALSE, warning=FALSE}
+boxCox(Clm)
+
+```
+
+The Box-Cox procedure shows the range in between about -1.2 to about 1.5. $\lambda$ = 1 is in the 95% confidence interval. But it violated two assumptions for the regression model appropriateness. Therefore, I will use $\lambda$ = 0 hoping that it shows a better result.
+
+## Model 2 (Logarithm Estimate Linear Regression)
+
+```{r message=FALSE, warning=FALSE}
+C_lg_lm <- lm(log(price) ~ mileage, data = car_dat)
+
+summary(C_lg_lm) %>% pander()
+
+plot(log(price) ~ mileage, data = car_dat, pch = 16, col = "blue", main = "Logarithm Second-Hand Car Price vs Mileage \n (Porsche Macan)", xlab = "mileage (miles)", ylab = "logarithm scaled price (USD)" )
+abline(C_lg_lm, col = "red")
+abline(v = my_mileage, lty = 2)
+legend("topright", legend = c("data", "Y_hat","Hoping mileage"), lty = c(NA, 1, 2), pch = c(16, NA, NA), col = c("blue", "red", "black"))
+
+```
+
+The transformed estimated linear regression equation is
+$$\hat{Y_i'} = 11.05 - 0.000007748X_i.$$
+
+
+```{r message=FALSE, warning=FALSE}
+par(mfrow = c(1,3))
+plot(C_lg_lm, which = 1)
+qqPlot(C_lg_lm$residuals, main = "QQ Normal")
+plot(C_lg_lm$residuals, ylab = "Residual", main = "Residual vs Order")
+par(mfrow = c(1,1))
+
+```
+
+The regression diagnostic procedures in the transformed model show the almost exact same result. Other assumptions are met, but the linear relation and constant variance are violated.
+
+```{r message=FALSE, warning=FALSE}
+l <- coef(C_lg_lm)
+
+plot(price ~ mileage, data = car_dat, col = "blue", pch = 16, main = "Second-Hand Car Price vs Mileage \n (Porsche Macan)", xlab = "mileage (miles)", ylab = "price (USD)")
+abline(Clm, col = "red")
+curve(exp(l[1] + l[2]*x), col = "gray", add = TRUE)
+abline(v = my_mileage, lty = 2)
+legend("topright", legend = c("data", "Y_hat","Hoping mileage","Log(Y_hat)"), lty = c(NA, 1, 2, 1), pch = c(16, NA, NA, NA), col = c("blue", "red", "black", "gray"))
+
+
+```
+
+The $\hat{Y_i}$ and $log(\hat{Y_i})$ regression lines are close. As the $\lambda$ = 1 shown in the Box-Cox procedure was in the 95% confidence interval, I can see that the result was not that different compare to the original linear regression line.
+
+The transformed estimated regression's y-intercept shows that when the mileage is zero the price of a car is \$62943.95 (= $e^{11.05}$) with < 2e-16 p-value.
+
+However, the slope in transformed regression is hard to show how much is changing with the original price form because the price is decreasing exponentially. But the slope's p-value (0.0001158) is significant to use in the transformed regression model's slope.
+
+
+## Predicting with Model 2
+
+```{r message=FALSE, warning=FALSE}
+exp(predict(C_lg_lm, data.frame(mileage = my_mileage), interval = "predict")) %>% pander()
+
+```
+The predicted price with my mileage will be $54612.98 by using Model 2. The result seems more accurate than the original regression prediction. Additionally, in the buyer's view Model 2 prediction will be more reasonable because the predicted price is lower than the original regression's price.
+
+I don't know so many things about the car. But I think besides mileage, the car price will be affected by car options and which year model it is. If the price is below the regression line, there may be a problem in a car, or the car had an accident. Better options and well-cared cars with the latest model will be placed above the regression line. I will study about buying the second-hand car beforehand.
+
+## What I leaerned
+I thought if I choose a different  $\lambda$ in the Box-Cox procedure that is above 95% the result will be different. But it was not. When the value was calculated in the logarithm, I had to be careful to transform back to its original unit. I will buy a second-hand car through this analysis. I also saw that the slope value of the transformed regression is hard to tell the average change because the slope is keep changing.

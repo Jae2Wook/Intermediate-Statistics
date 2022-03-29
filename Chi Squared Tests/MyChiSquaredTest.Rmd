@@ -1,0 +1,138 @@
+---
+title: "Chi Squared Test"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+
+<!-- Directions
+
+Come up with a chi squared test analysis of your own creation. 
+
+* Write the Background and clearly state your question. Then collect data and perform the linear regression analysis in order to answer your question. Use the proper order of first, ask the question, then second, figure out the answer.
+
+* You can use data from 
+    - An R data set
+    - the internet (like weather data, Facebook data, or sports data) 
+    - your own experiment 
+    - your own observational study
+* However,     
+    - Do not violate the "Human Subjects Rules" of the university: http://www.byui.edu/executive-strategy-and-planning/institutional-research/research-and-assessments/research-and-surveys
+
+* You need a sample size large enough to meet the requirements of the chi squared test. Unfortunately, the sample size is completely dependent on the situation you select. A good rule of thumb is 10 observations per "combination-group" in your data.
+
+-->
+
+```{r, message=FALSE, warning=FALSE}
+library(mosaic)
+library(tidyverse)
+library(pander)
+
+GSS2012 <- read.table("../../Data/GSS2012.csv", sep="\t", header=TRUE)
+
+```
+
+## Background
+
+People characters and thought can differ from where have lived and where they are living. The United States is a country with diverse people who share the same idea under one flag. Although Americans are rooted in diverse ethnicity, will their tendency of believing in people be the same? I wondered if American citizens trust others more in comparison to non-citizens.  
+
+You can look up more information about the data in [2012 General Social Survey Browser](http://sda.berkeley.edu/sdaweb/analysis/?dataset=gss12). The data column names are "USCTIZN" and "trust."
+
+```{r, message=FALSE, warning=FALSE}
+GSS <- GSS2012 %>% select(USCITZN, trust) %>% filter(USCITZN %in% c(1, 2), trust %in% c(1, 2))
+
+#table(GSS) %>% pander(caption = "Numbers of trust that are US citizens or not")
+
+```
+
+## Graph
+
+```{r, message=FALSE, warning=FALSE}
+barplot(table(GSS), beside = TRUE, col = c("red", "blue"), ylab = "Counts", main = "Trust: US Citizens and non citizens", 
+        names.arg = c("Trust", "Not Trust")) #  legend.text = TRUE, args.legend = list(bty = "n", x = "topleft")
+legend("topleft", legend = c("US Citizen", "Not US Citizen"), bty = "n", pch = 15, col = c("red","blue"), cex = 0.8)
+
+```
+
+| |Trust|Not Trust|
+|-|----|--------|
+|US Citizen|27|61|
+|Not US Citizen|26|64|
+Table: Numbers of trust that are US citizens or not
+
+We can see that the number of people that trust others (or don't) are similar whether they are US citizens or not in the survey. In other words, in general, people, whether they are US citizens or not, the ratio of trusting or not others is similar. This analysis will show if the chi-squared test of independence will support this result or not.
+
+The hypothesis to implement the test is 
+
+$$H_0: \text{Trusting or not others are not relevant that they are US citizens or not (independent).}$$
+$$H_a: \text{Trusting or not others are relevant that they are US citizens or not (associated).}$$
+
+The level of significance is $\alpha = 0.05$.
+
+## Analysis
+
+The chi-squaered test of independece formula is 
+
+$$\chi^{2} = \Sigma^{m}_{i = 1} \frac{(O_1 - E_1)^2}{E_i}$$
+
+```{r, message=FALSE, warning=FALSE}
+
+x <- table(GSS)
+
+mychi = chisq.test(x)
+mychi %>% pander()
+
+```
+
+According to the test's p-value, 0.9222, the null hypothesis is failed to reject. Thus, trusting or not others is not relevant (independent) that they are US citizens or not. In other words, trusting others are not associated with nationality. The result is the same as what we expected.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+# mychi$expected %>% pander(caption = "Expected numbers of trust that are US citizens or not")
+
+```
+
+| |Trust|Not Trust|
+|-|----|--------|
+|US Citizen|26.2|61.8|
+|Not US Citizen|26.8|63.2|
+Table: Expected numbers of trust that are US citizens or not
+
+All the expected counts are greater than 5 which tells the appropriateness to use the chi-squared test of independence. And here is a way to get the expected values.
+
+There are 27 + 61 = 88 in the US citizen row, and 26 + 64 = 90 in the non-citizen row. The total number of people is 178. The US citizen takes $\frac{88}{178}$ * 100 =  49.4382 percent, and non-citizen takes $\frac{90}{178}$ * 100 = 50.5618 percent. The total number of "trust" is 27 + 26 = 53, and the total number of "not trust" is 61 + 64 = 125. To get the US citizen who trust is 53 (trust total number) * 0.494382 (US citizen percentage for the total number of people). And the same process for the other values.
+
+|US citizen|Percentage|Trust|Not Trust|
+|---|---|---|---|
+|Yes|0.494382|26.20225|61.79775|
+|No|0.505618|26.79775|63.20225|
+Table: Hand calculated expected numbers of trust that are US citizens or not
+
+```{r, message=FALSE, warning=FALSE}
+# mychi$residuals %>% pander(caption = "Residuals of trust that are US citizens or not")
+
+```
+
+| |Trust|Not Trust|
+|-|----|--------|
+|US Citizen|0.1558|-0.1015|
+|Not US Citizen|-0.1541|0.1003|
+Table: Residuals of trust that are US citizens or not
+
+The Pearson residuals are calculated as
+
+$$\frac{\text{observed - expected}}{\sqrt{\text{expected}}}$$
+
+The Pearson residuals show the magnitude of how much the expected values are away from the observed values. 
+
+## Interpretation
+
+Following by the chi-squared test of independence, the test result, the p-value = 0.9222, shows that people trusting others are not associated (independent) whether they are US citizens or not. According to the survey, the ratio of the US citizens who trust is 0.3068182, and not trust is 0.6931818. For the ratio of the non-US citizen whose trust is 0.2888889, and not trust is 0.7111111. Both ratios are similar and the test result supports that they are similar not relying on nationality.Therefore, in general, regardless of nationality, about 30 percent of people trust others easily, and about 70 percent of people be careful about trusting others.
+
+
+

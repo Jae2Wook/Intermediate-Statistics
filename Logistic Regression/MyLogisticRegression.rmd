@@ -1,0 +1,100 @@
+---
+title: "My Simple Logistic Regression"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+<!-- Find some data of interest to you that can be analyzed with a logistic regression. Complete your Logistic Regression Analysis using this file. 
+
+Hint, run the command 
+
+> data() 
+
+in your Console to see available datasets in R that you could use for this Analysis. You are also welcome to collect data yourself, or find other available datasets online for this Analysis. Just be careful to not use anyone else's "analysis" for this Analysis. Also, no conducting surveys unless you have IRB approval to do so. -->
+
+```{r, message=FALSE, warning=FALSE}
+library(mosaic)
+library(ResourceSelection)
+library(tidyverse)
+library(pander)
+```
+
+## Background
+
+Even if a plant species is the same, their characteristics can be different depends on where they are originally from. The data are from an experiment on the cold tolerance of the grass species "Echinochloa crus-galli." This analysis will show the probability of where the grass is from `Mississippi` or `Quebec` by comparing the difference between carbon dioxide uptake rates (umol/m^2 sec).
+
+## Analysis
+
+Modeling the probability of the grass is from "Quebec" at various CO2 uptakes, the analysis applies the logistic regression model
+
+$$P(Y_i = 1|x_i) = \frac{e^{\beta_0+\beta_1 x_i}}{1+e^{\beta_0 + \beta_1 x_i}} = \pi_i $$
+where for observation $i$
+
+$\cdot$ $Y_i = 1$ denotes that the grass is from `Quebec`.
+
+$\cdot$ $Y_i = 0$ denots that the grass is from `Mississippi`.
+
+$\cdot$ $x_i$ denotes that carbon dioxide uptake rates (umol/m^2 sec) during the cold tolerance experiment.
+
+The hypothesis for this analysis is
+$$H_0: \beta_1 = 0$$
+$$H_a: \beta_1 \neq 0$$
+
+If $\beta_1 = 0$ in the above model, then $x_i$ (CO2 uptake) provides no insight about the probability of distinguishing the origin of the plant. The hypothesis that $\beta_0$ being zero or not is not appropriate becuase the CO2 uptake rate is zero is not realistic to this model and to the plants.
+
+```{r, message=FALSE, warning=FALSE}
+
+# View(CO2)
+Chic.glm <- glm(Type == "Quebec" ~ uptake, data = CO2, family = binomial)
+summary(Chic.glm) %>% pander()
+
+```
+
+The estimated model for $\pi_i$ is given by
+
+$$P(Y_i = 1|x_i) = \frac{e^{-3.87192 + 0.14130x_i}}{1 + e^{-3.87192 + 0.14130x_i}} = \hat{\pi_i}$$
+
+Comparing to the above model, $b_0$, the estimates of $\beta_0$, is -3.87192 with p-value = 9.14e-06, and $b_1$, the estimates of $\beta_1$, is 0.14130 with p-value = 2.32e-06. The p-value for the "uptake"($\beta_1$) is significant to reject the null hypothesis, which "CO2 uptake" of the grass affects the probability that it is originated from `Quebec`.
+
+## Graph
+
+```{r, message=FALSE, warning=FALSE}
+par(mai = c(1, 1.3, 1, 1))
+
+C = coef(Chic.glm)
+#levels(CO2$Type)
+palette(c("blue", "brown"))
+plot(Type== "Quebec" ~ uptake, data = CO2, pch = 16, col = Type, ylab = "Probability of the origin of \nthe plant from Quebec", main = "The Grass from Quebec")
+curve(exp(C[1] + C[2]*x) / (1 + exp(C[1] + C[2]*x)), add = TRUE)
+
+```
+
+
+## Checking Logistic Regression Appropriateness
+
+To demonstrate that the logistic regression is a good fit to these data, the analysis applies the Hosmer-Lemeshow goodness of fit test because there four (a few) x-values are repeating.
+
+```{r, message=FALSE, warning=FALSE}
+# table(CO2$uptake)
+hoslem.test(Chic.glm$y, Chic.glm$fitted, g = 10) %>% pander()
+
+```
+
+The Hosmer-Lemeshow goodness of fit test p-value is 0.1231 which the logistic regression is appropriate which means that we can guess where the grass in from by knowing the CO2 uptake rates.
+
+## Interpretation
+
+Verified by the Hosmer-Lemeshow goodness of fit test, this logistic regression can be used to distinguish where the grass was originally from by seeing the CO2 uptake rates. The value $e^{b_0}$ is not interpretable because the CO2 uptake rate being zero is not realistic. The value $e^{b_1}$ = $e^{0.1413}$ $\approx$ 1.15177 shows that the odds of the grass is originally from `Quebec` increases by a factor of 1.15177 for every 1 (umol/m^2 sec)  carbon dioxide uptake rates increase.
+
+If we predict that the grass with the CO2 uptake rate with 30(umol/m^2 sec), the grass is from `Quebec` with 59 percent by using R.
+
+```{r, message=FALSE, warning=FALSE}
+
+predict(Chic.glm, data.frame(uptake = 30), type = 'response') %>% pander()
+
+```
+

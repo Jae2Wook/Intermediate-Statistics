@@ -1,0 +1,131 @@
+---
+title: "Chocolate"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+```{r, include=FALSE}
+# Be sure to use your file menus at the top of R-Studio to:
+# "Session -> Set working directory -> To source file location"
+# Then play this chunk and the next one to get the data into R.
+library(mosaic)
+library(tidyverse)
+library(car)
+library(DT)
+library(pander)
+library(readr)
+choc <- read_csv("../../Data/Chocolate.csv")
+```
+
+```{r, eval=FALSE}
+View(choc)
+?choc
+```
+
+----
+
+<!-- Instructions:
+
+ Use the Chocolate dataset and a Kruskal-Wallis Test(s) to answer an interesting question(s) that you come up with.
+ 
+ About the dataset:
+ 
+  * Company: Name of the company manufacturing the bar.
+
+  * Orig: The specific geo-region of origin for the bar.
+
+  * Review: Date of publication of the review.
+
+  * Cocoa: Cocoa percentage (darkness) of the chocolate bar being reviewed.
+
+  * Location: Manufacturer base country.
+
+  * Rating: Expert rating for the bar.
+      5= Elite (Transcending beyond the ordinary limits)
+      4= Premium (Superior flavor development, character and style)
+      3= Satisfactory(3.0) to praiseworthy(3.75) (well made with special qualities)
+      2= Disappointing (Passable but contains at least one significant flaw)
+      1= Unpleasant (mostly unpalatable)
+
+   * Type: The variety (breed) of cocoa bean used, if provided.
+   
+   * BroadOrig: The broad geo-region of origin for the bean.
+
+Note this dataset and description come from: © 2018 Kaggle Inc for further details visit:
+
+[Kaggle.com](https://www.kaggle.com/rtatman/chocolate-bar-ratings/data)
+
+
+If you want to give your critiquers some ideas about what you have questions on and would like help with, place those details here.-->
+
+
+
+<!--End your comments to your critiquers before this line.-->
+
+----
+
+<!--Begin writing your Analysis after this point.-->
+
+## Background
+
+This analysis is trying to help the new chocolate bar manufacturers. The manufacturers can make various darkness types of chocolate bars by choosing a certain type of cacao bean. There are 41 types of cacao beans. This analysis will find out if different types of cacao beans are used with different content in a different bar of chocolate. To find a certain type of cacao bean will be beneficial for a new manufacturer to start with because it can make various darkness of chocolate bars. The analysis will be practiced with the five most common cacao beans to make bars of chocolate. The table's first five types of cacao beans are showing the most commonly used types of cacao beans to the least.
+
+```{r, message=FALSE, warning=FALSE}
+choc1 <- choc %>% mutate(Cocao = parse_number(Cocao), na.rm = TRUE)
+#table(choc1$Type) %>% pander()
+View(choc1)
+
+choc2 <- choc1 %>% group_by(Type) %>% summarise(numbers = n()) %>% arrange(desc(numbers))
+
+View(choc2)
+datatable(choc2, options=list(lengthMenu = c(5,10)), extensions="Responsive")
+
+choc3 <- choc1 %>% filter(Type %in% c("A", "Trinitario", "Criollo", "Forastero", "Forastero (Nacional)"))
+View(choc3)
+
+```
+
+## Analysis
+
+$\text{The Kruskal-Wallis Rank Sume Test}$ (non-parametric test) will be used in this analysis because the distributions of the data are not normal and the data are coming from more than two samples. However, the analysis assumes the samples come from the same population.
+
+The null hypothesis and the alternative hypothesis can be written as
+
+$$H_{0}: \text{The content of bars of chocolate with top five commonly used types of cacao beans all come from}$$
+$$\text{the same distribution}$$
+$$H_{a}: \text{At least one type of cacao bean is used with different content in a bar of chocolate}$$
+
+The level of significance is $\alpha = 0.05$
+
+```{r, message=FALSE, warning=FALSE}
+kruskal.test(Cocao ~ Type, data = choc3)
+
+```
+
+$\star$ Kruskal-Wallis Rank Sum Test uses chi-squared distribution because the Kruskal-Wallis Rank Sum Test distribution is similar to it. So, the $p-value$ is an approximate value.
+
+The test result appears that the $p-value$, 0.3784 is higher than the level of significance, $\alpha = 0.05$. So, the null hypothesis is failed to reject. That is, the top five different types of cacao beans are used with the same content in different bars of chocolate. The following graphic displays the data.
+
+## Graph
+
+```{r, message=FALSE, warning=FALSE}
+boxplot(Cocao ~ Type, data = choc3, ylab = "Cacao content in a shocolate bar (%)", cex.names = 0.5, xlab = "Types of cacao beans", main = "Top 5 Different Types of Cacao Beans Content\n in Chocolate bars", col = "chocolate")
+stripchart(Cocao ~ Type, data = choc3, col = "brown", add = TRUE, pch = 1, vertical = TRUE, jitter = TRUE)
+
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+pander(favstats(Cocao ~ Type, data = choc3)[,-10], caption = "Top 5 Different Types of Cacao Beans Content in a Chocolate bar")
+
+```
+
+## Conclusion
+
+The Kruskal-Wallis Rank Sum Test result shows that the top five commonly used types of cacao beans content in a chocolate bar have similar content to the other chocolate bars. The graph and the table show that the first quartile, the median, and the third quartile are almost equal.
+
+The type of cacao bean does not affect content to make a bar of chocolate. The new chocolate bar manufacturers can use any type of cacao beans to make chocolate bars in general. But referring to the graph, the only difference is that the type "A" cacao bean can be used with more varied content in the chocolate bars. There will be not a big difference choosing the other types of cacao beans, but type "A" cacao bean can give more various chocolate bar darkness options for a new manufacturer.

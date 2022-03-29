@@ -1,0 +1,175 @@
+---
+title: "Residual"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r message=FALSE, warning=FALSE}
+library(car)
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+library(pander)
+library(readr)
+
+laptop <- read_csv("C:/Users/Jae/Desktop/R/Math 325/Statistics-Notebook-master/Statistics-Notebook-master/Data425/laptops.csv", 
+    col_types = cols(Price_euros = col_number(), 
+        Weight = col_number()))
+
+```
+
+## Purpose
+
+In this analysis, I am going to tell about `Residual`, `SSE`, `SSR`, `SSTO`, `R_squared (coefficient of determination)`, `adjusted R_squared`, `r(coefficient of correlation)`, and `Residual standard error`.
+
+## Graph
+
+```{r message=FALSE, warning=FALSE}
+laplm <- lm(Price_euros ~ Weight, data = laptop)
+summary(laplm) %>% pander()
+EU <- laptop$Price_euros
+EU_hat <- predict(laplm)
+
+plot(Price_euros ~ Weight, data = laptop, pch = 16, col = "azure3", main = "Laptop Prices depeding on Weights", ylab = "Laptop Prices (Euros)", xlab = "Weight (kg)")
+abline(laplm, col = "red")
+abline(h = mean(EU), col = "black", lty = 2)
+segments(x0 = 4,y0 = predict(laplm, data.frame(Weight = 4)), x1 = 4, y1 = 1123.687, col = "cyan2")
+legend("topleft", legend = c("Y_i", "Y_hat", "Y_bar", "Y_hat - Y_bar"), lty = c(NA, 1, 2, 1), pch = c(16, NA, NA, NA), col = c("azure3", "red", "black", "cyan2"))
+
+```
+
+
+## residual, SSE, SSR, SSTO, R_sqaured from the data
+
+```{r message=FALSE, warning=FALSE}
+Y <- laptop$Price_euros
+Y_hat <- predict(laplm)
+Y_bar <- mean(Y)
+
+residual <- predict(laplm, data.frame(Weight = 4)) - Y_bar
+SSE <- sum((Y - Y_hat)^2)
+SSR <- sum((Y_hat - Y_bar)^2)
+SSTO <- SSE + SSR
+R_squared <- SSR/SSTO
+r <- sqrt(R_squared)
+MSE <- SSE / 1301
+
+Tab <- matrix(c(residual, SSE, SSR, SSTO, R_squared, r, MSE), ncol = 1, byrow = TRUE)
+colnames(Tab) <- c("value")
+rownames(Tab) <- c("residual", "SSE", "SSR", "SSTO", "R_squared", "r", "MSE")
+Tab <- as.table(Tab)
+Tab %>% pander()
+```
+
+MSE (mean squared error) and residual standard error are the same.
+
+$\star$MSE definition: the average squared difference between the estimated values and the actual value.
+
+## Math Equations & Explanations
+
+### Residuals
+$$r_i = Y_i - \hat{Y_i}$$
+Explanation: Distance of dot to estimated line. Residual showing graph is on the graph of SSE becuase SSE has residuals in its calculation. 
+
+### SSE (Sum of Squared Errors)
+$$= \Sigma(Y_i - \hat{Y_i})^{2}$$
+Explanation: Measures how much the observations deviate from the line. (from dots (data) to the regression line)
+
+```{r message=FALSE, warning=FALSE}
+set.seed(19)
+x <- c(1, 2, 3, 4, 5, 6)
+sigma <- 0.9
+epsilon <- rnorm(6, 0, sigma)
+beta_0 <- 2
+beta_1 <- 0.35
+y <- beta_0 + beta_1*x + epsilon
+lmr <- lm(y ~ x)
+
+plot(y ~ x, pch=16, col="skyblue3", xlim=c(0,7), cex=2, yaxt='n', xaxt='n', xlab="", ylab="", main="SSE")
+for (i in 1:6){
+  lines(rep(x[i]-0.02, 2), c(y[i], sum(lmr$coef*c(1,x[i]-0.02))), col="skyblue", lty=1, lwd=3)  
+}
+points(y ~ x, pch=16, col="skyblue3", xlim=c(0,7), cex=2)
+abline(lmr, col="black", lwd=2)
+legend("topleft", legend = c("Y_hat", "Residual", "Y"), lty = c(1, 1, NA), pch = c(NA, NA, 16), col = c("black", "skyblue", "skyblue3"))
+
+```
+
+
+## SSR (Sum of Squared Regression)
+$$= \Sigma(\hat{Y_i} - \bar{Y})^{2}$$
+Explanation: Measures how much the regression line deviates from the average y-value.
+
+```{r message=FALSE, warning=FALSE}
+plot(y ~ x, pch=16, col="gray100", xlim=c(0,7), cex=2, yaxt='n', xaxt='n', xlab="", ylab="", main="SSR")
+for (i in 1:6){
+  lines(rep(x[i]-0.06, 2), c(mean(y),sum(coef(lmr)*c(1,x[i]-0.06))), col="lightslategray", lty=1, lwd=2) 
+}
+abline(h=mean(y), col="gray", lty=2, lwd=2)
+abline(lmr, col="black", lwd=2)
+legend("topleft", legend = c("Y_hat", "Y_bar"), lty = c(1, 2), col = c("black", "gray"))
+
+```
+
+
+### SSTO (Total Sum of Squares)
+$$= \Sigma(Y_i - \bar{Y})^{2}$$ $$= SSE + SSR$$
+
+Explanation: Measures how much the y-values deviate from the average y-value. (dots (data) to the average y-value)
+
+```{r message=FALSE, warning=FALSE}
+plot(y ~ x, pch=16, col="skyblue3", xlim=c(0,7), cex=2, yaxt='n', xaxt='n', xlab="", ylab="", main="SSTO")
+for (i in 1:6){
+  lines(rep(x[i]+0.02, 2), c(mean(y),y[i]), col="gray", lty=2, lwd=2) 
+}
+abline(h=mean(y), col="gray", lty=2, lwd=2)
+legend("topleft", legend = c("Y_bar", "Y"), lty = c(2, NA), pch = c(NA, 16), col = c("gray", "skyblue3"))
+
+```
+
+
+### R_squared (coefficient of determination)
+$$= \frac{SSR}{SSTO}$$ $$= \frac{\Sigma(\hat{Y_i} - \bar{Y})^{2}}{\Sigma(Y_i - \bar{Y})^{2}}$$ $$= 1 - \frac{SSE}{SSTO}$$ 
+Explanation: Proportion of variation in Y explained by the regression. It is a coefficient that measures how well the estimate regression model describes the actual sample. If R_squared is 1, the estimated regression model perfectly fits to data. If it is 0, the estimated regression model cannot explain the distributed data. 0 $\leq$ $R^2$ $\leq$ 1.
+
+```{r message=FALSE, warning=FALSE}
+plot(y ~ x, pch=16, col="skyblue3", xlim=c(0,7), cex=2, yaxt='n', xaxt='n', xlab="", ylab="", main="R_squared")
+for (i in 1:6){
+  lines(rep(x[i]+0.02, 2), c(mean(y),y[i]), col="green3", lty=1, lwd=2) 
+}
+for (i in 1:6){
+  lines(rep(x[i]-0.06, 2), c(mean(y),sum(coef(lmr)*c(1,x[i]-0.06))), col="lightslategray", lty=1, lwd=2) 
+}
+abline(h=mean(y), col="gray", lty=2, lwd=2)
+abline(lmr, col="black", lwd=2)
+legend("topleft", legend = c("Y", "Y_hat", "Y_bar", "Y-hat - Y_bar", "Y - Y_bar"), lty = c(NA, 1, 2, 1, 1), col = c("skyblue3", "black", "gray", "lightslategray", "green3"), pch = c(16, NA, NA, NA, NA))
+
+
+```
+
+
+### Adjusted R_squared 
+$$= 1 - \frac{(1 - R^{2})(n - 1)}{n - p - 1} \quad \text{(n: sample size, p: number of variables)}$$
+Explanation: It is a value that adjust R_squared to number of x variables because $R^2$'s value never decrease, but increase or stable when number of x variable is added. So, adjusted $R^2$ complement $R^2$ weakness. 
+
+### r (coefficient of correlation)
+$$= \sqrt{R^{2}}$$ $$= \frac{\Sigma(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\Sigma(x_i - \bar{x})^{2}} \sqrt{\Sigma(y_i - \bar{y})^{2}}}$$
+Explanation: A measure of association between two continuous variables. When r > 0, if one variable takes a value greater(smaller) than the mean, the other variable takes a value greater(smaller) than the mean. When r < 0, if one variable takes a value greater(smaller) than the mean, the other variable takes a value smaller(greater) than the mean. -1 $\leq$ r $\leq$ 1.
+
+## Insights
+
+r can have a value between -1 and 1. When r is -1 or 1, it means that linear regression model shows 100% correlation, which means if I know one variable's value, I can know the other variable's value with 100%. 
+
+As $R^2$ is r squared, its value is in between 0 to 1. $R^2$ measures the strenght of the relationship between the model and the dependent variable on 0 to 100%. It evaluates the scatter of the data points around the fitted regression line. When $R^2$ is higher, the smaller differneces between the observed data and the fitted value. 
+
+ex) When r  = 0.9, then $R^2$ = 0.81. This means that the linear regression model can explain the relationship between X and Y with 81% accuracy. 
+
+
+Residual standard error value is small means that the difference between the estimated values and the actual values is small, $R^2$ gets close to 1.
+
+A slope is 
+$$\frac{\Sigma(x_i - \bar{x})(y_i - \bar{y})}{\Sigma(x_i - \bar{x})^2}$$ $$= r\frac{s_y}{s_x}.$$
+As the slope is steeper, the r value moves away from 0. r and slope should have the same sign(+ or -). (As the slope's p-value is smaller, the $R^2$ gets close to 1.)
+The p-value indicates if there is a significant relationship described by the model, and the $R^2$ measures the degree to which the data is explained by the model. It is therefore possible to get a significant p-value with a low R-squared value.
